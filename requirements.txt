@@ -1,0 +1,7 @@
+Flask
+python-dotenv
+-e ./datastore
+accelerate>=0.26.0
+
+# run "pip install -e ."
+# run "python -m app.app"
