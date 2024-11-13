@@ -46,7 +46,10 @@ class DataStore:
         self.llm = HuggingFacePipeline(pipeline=hf_pipeline)
         self.prompt_template = PromptTemplate(
             input_variables = ["context", "question"],
-            template = "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
+            template = (
+                "Context: {context}\n\nQuestion: {question}\n\n"
+                "Provide a concise and clear answer only. Do not include the context or the question in your response:"
+                )
         )
         self.qa_chain = self.prompt_template | self.llm
 
