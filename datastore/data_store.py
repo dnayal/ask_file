@@ -5,8 +5,8 @@ from langchain.schema.runnable import RunnableSequence
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyMuPDFLoader
 
+
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
-from accelerate import disk_offload
 
 import torch
 
@@ -29,7 +29,9 @@ class DataStore:
 
     def _initialise_llm(self):
         # Initialize a small Hugging Face model pipeline
-        model_name = "meta-llama/Llama-3.2-1B"  # or use another lightweight model such as "facebook/opt-1.3b"
+        #model_name = "meta-llama/Llama-3.2-1B"  # or use another lightweight model such as "facebook/opt-1.3b"
+        model_name = "Qwen/Qwen2.5-1.5B-Instruct"
+
         model = AutoModelForCausalLM.from_pretrained(model_name)
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         hf_pipeline = pipeline(
@@ -39,7 +41,8 @@ class DataStore:
             device="cpu",
             max_new_tokens=150,  # Controls the number of generated tokens
             min_length=50,  # Ensures a minimum length for response
-            do_sample=False  # Enables sampling for more natural output
+            temperature=0.1,
+            do_sample=True  # Enables sampling for more natural output
         )  # Use "cpu" for local inference
         
         # Wrap the Hugging Face pipeline with LangChain's HuggingFacePipeline
@@ -47,11 +50,17 @@ class DataStore:
         self.prompt_template = PromptTemplate(
             input_variables = ["context", "question"],
             template = (
-                "Context: {context}\n\nQuestion: {question}\n\n"
-                "Provide a concise and clear answer only. Do not include the context or the question in your response:"
+                "Use the following context to answer the question.\n"
+                "Do not repeat the context or the question in your answer.\n\n"
+                "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
                 )
         )
-        self.qa_chain = self.prompt_template | self.llm
+        # Define a simple RunnableSequence
+        self.qa_chain = RunnableSequence(   
+            self.prompt_template,  # Format the prompt
+            self.llm,              # Generate text
+            (lambda output: output.split("Answer:")[-1].strip())
+        )
 
 
     def load_and_split_pdf(self, file_path, chunk_size=1000, chunk_overlap=100):
@@ -84,10 +93,12 @@ class DataStore:
     
 
     def get_answer_from_llm(self, query):
+
         relevant_chunks = self.search(query)
         unique_chunks = list({chunk.page_content for chunk in relevant_chunks})
         context = " ".join(unique_chunks)
                 
         # Generate the response using the Hugging Face LLM
         response = self.qa_chain.invoke({"context":context, "question": query})
+
         return response
