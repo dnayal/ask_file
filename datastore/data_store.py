@@ -5,17 +5,17 @@ from langchain.schema.runnable import RunnableSequence
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyMuPDFLoader
 
-
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 
 import torch
 
 
+"""
+Main interface to handle file storage and query processing.
+"""
 class DataStore:
 
-    """
-    Main interface to handle file storage and query processing.
-    """
+    # initialise the DataStore instance
     def __init__(self, persist_directory="__chroma_db__"):
         self.persist_directory = persist_directory
         self.embedding_model = HuggingFaceEmbeddings(model_name = "sentence-transformers/all-MiniLM-L6-v2")
@@ -24,9 +24,11 @@ class DataStore:
         self._initialise_llm()
     
 
+    # initialise the vector database i.e. Chroma for now
     def _initialise_vector_db(self):
         self.vector_db = Chroma(embedding_function=self.embedding_model, persist_directory=self.persist_directory)
 
+    # initialise LLM
     def _initialise_llm(self):
         # Initialize a small Hugging Face model pipeline
         #model_name = "meta-llama/Llama-3.2-1B"  # or use another lightweight model such as "facebook/opt-1.3b"
@@ -39,10 +41,10 @@ class DataStore:
             model=model, 
             tokenizer=tokenizer, 
             device="cpu",
-            max_new_tokens=150,  # Controls the number of generated tokens
-            min_length=50,  # Ensures a minimum length for response
+            max_new_tokens=300,    # Controls the number of generated tokens
+            min_length=100,         # Ensures a minimum length for response
             temperature=0.1,
-            do_sample=True  # Enables sampling for more natural output
+            do_sample=True          # Enables sampling for more natural output
         )  # Use "cpu" for local inference
         
         # Wrap the Hugging Face pipeline with LangChain's HuggingFacePipeline
@@ -63,6 +65,7 @@ class DataStore:
         )
 
 
+    # load the file into the vector db
     def load_and_split_pdf(self, file_path, chunk_size=1000, chunk_overlap=100):
         loader = PyMuPDFLoader(file_path)
         pages = loader.load()
@@ -83,6 +86,7 @@ class DataStore:
         print("==> Saved chunks to Chroma vector database")
 
 
+    # search for a relative context within the vector store
     def search(self, query, top_k=3):
         if not self.vector_db:
             print("==> Vector database not initialised")
@@ -92,6 +96,7 @@ class DataStore:
         return results
     
 
+    # pass the question and context from the vector database over to LLM
     def get_answer_from_llm(self, query):
 
         relevant_chunks = self.search(query)

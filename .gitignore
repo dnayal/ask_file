@@ -2,3 +2,4 @@
 *.egg-info
 __pycache__
 __chroma_db__
+__uploads__
