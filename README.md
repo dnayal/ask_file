@@ -1,0 +1,1 @@
+This is a mini LLM chat program that enables the user to upload a PDF and then ask questions based on that PDF.
