@@ -4,11 +4,11 @@ from langchain.prompts import PromptTemplate
 from langchain.schema.runnable import RunnableSequence
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyMuPDFLoader
+from langchain.chains.conversation.memory import ConversationBufferMemory
 
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 
 import torch
-
 
 """
 Main interface to handle file storage and query processing.
@@ -20,6 +20,7 @@ class DataStore:
         self.persist_directory = persist_directory
         self.embedding_model = HuggingFaceEmbeddings(model_name = "sentence-transformers/all-MiniLM-L6-v2")
         self.vector_db = None # will hold Chroma instance
+        self.memory = ConversationBufferMemory(memory_key="history", return_messages=True)
         self._initialise_vector_db()
         self._initialise_llm()
     
@@ -50,11 +51,14 @@ class DataStore:
         # Wrap the Hugging Face pipeline with LangChain's HuggingFacePipeline
         self.llm = HuggingFacePipeline(pipeline=hf_pipeline)
         self.prompt_template = PromptTemplate(
-            input_variables = ["context", "question"],
+            input_variables = ["history", "context", "question"],
             template = (
-                "Use the following context to answer the question.\n"
-                "Do not repeat the context or the question in your answer.\n\n"
-                "Context: {context}\n\nQuestion: {question}\n\nAnswer:"
+                "Use the following context and history to answer the question.\n"
+                "Do not repeat the history or the context or the question in your answer.\n\n"
+                "History: {history}\n\n"
+                "Context: {context}\n\n"
+                "Question: {question}\n\n"
+                "Answer:"
                 )
         )
         # Define a simple RunnableSequence
@@ -70,8 +74,6 @@ class DataStore:
         loader = PyMuPDFLoader(file_path)
         pages = loader.load()
 
-        print(f"==> Loaded {len(pages)} pages from PDF")
-
         text_splitter = CharacterTextSplitter(
             separator="\n",
             chunk_size=chunk_size,
@@ -80,10 +82,7 @@ class DataStore:
         )
 
         chunks = text_splitter.split_documents(pages)
-        print(f"==> Pages split into {len(chunks)} chunks")
-
         self.vector_db = Chroma.from_documents(documents=chunks, embedding=self.embedding_model, persist_directory=self.persist_directory)
-        print("==> Saved chunks to Chroma vector database")
 
 
     # search for a relative context within the vector store
@@ -104,6 +103,8 @@ class DataStore:
         context = " ".join(unique_chunks)
                 
         # Generate the response using the Hugging Face LLM
-        response = self.qa_chain.invoke({"context":context, "question": query})
+        history = self.memory.load_memory_variables({})["history"]
+        response = self.qa_chain.invoke({"history":history, "context":context, "question": query})
+        self.memory.save_context({"history": history, "question": query}, {"answer": response})
 
         return response
