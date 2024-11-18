@@ -1,5 +1,14 @@
 .venv
 *.egg-info
+
+# python cache
 __pycache__
+
+# chroma database storage
 __chroma_db__
+
+# file upload location
 __uploads__
+
+# jupyter notebook run file
+0.2.27
