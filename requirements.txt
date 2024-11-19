@@ -5,6 +5,10 @@ flask-cors
 langchain-nvidia-ai-endpoints
 langchain-core
 langgraph>0.2.27
+langsmith
+tavily-python
+langchain-community
+langgraph-checkpoint-sqlite
 -e ./datastore
 
 # run "pip install -e ."
