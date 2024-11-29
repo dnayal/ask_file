@@ -9,6 +9,11 @@ langsmith
 tavily-python
 langchain-community
 langgraph-checkpoint-sqlite
+
+evaluate
+datasets
+fsspec
+huggingface_hub
 -e ./datastore
 
 # run "pip install -e ."
