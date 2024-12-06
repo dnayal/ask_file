@@ -1,6 +1,7 @@
 Flask
 python-dotenv
-accelerate>=0.26.0
+#accelerate>=0.26.0
+accelerate
 flask-cors
 langchain-nvidia-ai-endpoints
 langchain-core
@@ -10,10 +11,11 @@ tavily-python
 langchain-community
 langgraph-checkpoint-sqlite
 
-evaluate
+#evaluate
 datasets
 fsspec
 huggingface_hub
+deepeval
 -e ./datastore
 
 # run "pip install -e ."
